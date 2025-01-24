@@ -78,84 +78,17 @@ public class RobotContainer {
    * joysticks}.
    */
   private void configureBindings() {
-    m_driverController.a().onTrue(elevator.talonSet(30));
-    m_driverController.b().onTrue(elevator.talonSet(20));
-    m_driverController.x().onTrue(elevator.talonSet(10));
+    m_driverController.a().onTrue(elevator.setElevator(TalonElevator.Heights.L1));
+    m_driverController.b().onTrue(elevator.setElevator(TalonElevator.Heights.L2));
+    m_driverController.x().onTrue(elevator.setElevator(TalonElevator.Heights.L3));
+    m_driverController.y().onTrue(elevator.setElevator(TalonElevator.Heights.L4));
     //m_driverController.y().onTrue(elevator.talonSet(34));
-    m_driverController.rightBumper().onTrue(elevator.talonSet(0));
-    /*m_driverController.leftBumper().onTrue(Commands.runOnce(()->{
-      //SignalLogger.setPath("/media/sda1/ctre-logs/");
-      SignalLogger.start();
-      
-    }));
-    m_driverController.rightBumper().onTrue(Commands.runOnce(SignalLogger::stop));
-
-    m_driverController.x().whileTrue(elevator.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
-    m_driverController.y().whileTrue(elevator.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
-    m_driverController.a().whileTrue(elevator.sysIdDynamic(SysIdRoutine.Direction.kForward));
-    m_driverController.b().whileTrue(elevator.sysIdDynamic(SysIdRoutine.Direction.kReverse));*/
+    m_driverController.rightBumper().onTrue(elevator.setElevator(TalonElevator.Heights.L0));
+    // Must reference the actual class name when enum (a class) is made within a class
   }
-}
-
+} // 40.75 inches
 
 // Terminal
 // git add .
 // git commit -m 'message'
 // git push origin HEAD:main2
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// Schedule `ExampleCommand` when `exampleCondition` changes to `true`
-  //new Trigger(m_exampleSubsystem::exampleCondition)
-      //.onTrue(new ExampleCommand(m_exampleSubsystem));
-
-  // Schedule `exampleMethodCommand` when the Xbox controller's _ button is pressed,
-  // cancelling on release.
-
-  // Example control
-  // m_driverController.x().whileTrue(m_exampleSubsystem.servoCommand1());
-
-  // Motor movement
-  // mySubsystem.setDefaultCommand(runOnce(() -> mySubsystem.motorSet(m_driverController.getRightY()), mySubsystem));
-
-  // Calculations noob PID
-  //driveTrain.setDefaultCommand(runOnce(() -> ifButtonPressed(), driveTrain));
-  //m_driverController.x().onTrue(runOnce(() -> driveTrain.PID(2), driveTrain));
-  //m_driverController.leftBumper().whileTrue(driveTrain.betterPID(()-> m_driverController.getLeftX()));
-
-/**
- * Use this to pass the autonomous command to the main {@link Robot} class.
- *
- * @return the command to run in autonomous
- */
-//public Command getAutonomousCommand() {
-  // An example command will be run in autonomous
-  //return driveTrain;
-//}
-
-
-// Old code
- // Task 1 - DONE  
-    /*m_driverController.x().onTrue(runOnce(() -> m_exampleSubsystem.task1method("x"), m_exampleSubsystem));
-    m_driverController.y().onTrue(runOnce(() -> m_exampleSubsystem.task1method("y"), m_exampleSubsystem));
-    m_driverController.a().onTrue(runOnce(() -> m_exampleSubsystem.task1method("a"), m_exampleSubsystem));
-    m_driverController.b().onTrue(runOnce(() -> m_exampleSubsystem.task1method("b"), m_exampleSubsystem));*/
-
-    // Task 2 - In progress
-    //m_driverController.x().whileTrue(m_exampleSubsystem.task2(3));
-
-    // Task 3 - DONEish
-    //m_driverController.leftBumper().whileTrue(runOnce(() -> m_exampleSubsystem.task3method("left"), m_exampleSubsystem));
-    //m_driverController.rightBumper().whileTrue(runOnce(() -> m_exampleSubsystem.task3method("right"), m_exampleSubsystem));
-
-    // Task 4 - In progress
-    /*m_driverController.x().whileActiveOnce(
-      runOnce(() -> m_exampleSubsystem.task4method((m_driverController.getRightY() + 1)/2), m_exampleSubsystem));
-      */
-      //m_exampleSubsystem.setDefaultCommand(runOnce(() -> m_exampleSubsystem.task4method((m_driverController.getRightY() + 1)/2), m_exampleSubsystem));
-    
-  // PID button control
-  /*m_driverController.x().onTrue(runOnce(() -> driveTrain.PID(1), driveTrain));
-    m_driverController.y().onTrue(runOnce(() -> driveTrain.PID(2), driveTrain));
-    m_driverController.a().onTrue(runOnce(() -> driveTrain.PID(3), driveTrain));
-    m_driverController.b().onTrue(runOnce(() -> driveTrain.PID(4), driveTrain));*/

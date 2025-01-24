@@ -27,21 +27,27 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.units.measure.*;
 import static edu.wpi.first.units.Units.Volts; // Static so that everything is there (No need to write Units.)
 
+import java.util.function.DoubleSupplier;
+
 public class TalonElevator extends SubsystemBase{ // EXTENDS SUBSYSTEMBASE!!!!!!!!!
     private TalonFX myTalon;
     private MotionMagicVoltage m_request;
     private VoltageOut m_voltReq;
 
     // 50Hz NetworkTable variables
+    // Creates a new field that contains all output variables
     private final NetworkTableInstance inst = NetworkTableInstance.getDefault();
     private final NetworkTable elevatorTable = inst.getTable("Elevator");
 
+    // Position
     private final DoublePublisher motorRotPub = elevatorTable.getDoubleTopic("Motor rotations").publish(PubSubOption.periodic(0.02));
-    private final DoublePublisher closedLoopPub = elevatorTable.getDoubleTopic("Closed Loop Output").publish(PubSubOption.periodic(0.02));
-    private final DoublePublisher FFPub = elevatorTable.getDoubleTopic("Feed Forward").publish(PubSubOption.periodic(0.02));
+    private final DoublePublisher rotationsTargetPub = elevatorTable.getDoubleTopic("Position Target").publish(PubSubOption.periodic(0.02));
+    // Velocity
     private final DoublePublisher velocityPub = elevatorTable.getDoubleTopic("Velocity").publish(PubSubOption.periodic(0.02));
     private final DoublePublisher velocityTargetPub = elevatorTable.getDoubleTopic("Velocity Target").publish(PubSubOption.periodic(0.02));
-    private final DoublePublisher rotationsTargetPub = elevatorTable.getDoubleTopic("Position Target").publish(PubSubOption.periodic(0.02));
+    // kS & kG (Feed forward)
+    private final DoublePublisher closedLoopPub = elevatorTable.getDoubleTopic("Closed Loop Output").publish(PubSubOption.periodic(0.02));
+    private final DoublePublisher FFPub = elevatorTable.getDoubleTopic("Feed Forward").publish(PubSubOption.periodic(0.02));
 
     // Constructor
     public TalonElevator() {
@@ -53,7 +59,7 @@ public class TalonElevator extends SubsystemBase{ // EXTENDS SUBSYSTEMBASE!!!!!!
         var supplyVoltageSignal = myTalon.getSupplyVoltage(); // Motor signaling rate
         m_voltReq = new VoltageOut(0);
 
-        // Limits
+        // Limits and modes
         talonFXConfigs.MotorOutput.NeutralMode = NeutralModeValue.Brake; // Set neutral mode
         talonFXConfigs.CurrentLimits.SupplyCurrentLimitEnable = true;
         talonFXConfigs.CurrentLimits.SupplyCurrentLimit = 15; // Amps
@@ -64,15 +70,17 @@ public class TalonElevator extends SubsystemBase{ // EXTENDS SUBSYSTEMBASE!!!!!!
         talonFXConfigs.SoftwareLimitSwitch.ReverseSoftLimitThreshold = 0;
         
         // Tuning
-        // Mainly for overshoot + undershoot tuning
         var slot0Configs = talonFXConfigs.Slot0;
+        // kG and kS is mainly for overshoot + undershoot tuning
         // 0.5V is needed for gravity/friction
         slot0Configs.kG = 0.37; // Gravity 0.37 volt
         slot0Configs.GravityType = GravityTypeValue.Elevator_Static;
         slot0Configs.kS = 0.07; // Friction 0.07 volt
         slot0Configs.StaticFeedforwardSign = StaticFeedforwardSignValue.UseClosedLoopSign;
+        // kV and kA pairs with MM
         slot0Configs.kV = 0.13; // volt/rps
         slot0Configs.kA = 0.008; // volt/rps/s //0.008
+        // kP and kD accounts for errors created by in-match hits
         slot0Configs.kP = 3.5; // volt/(r*s) //3.5
         slot0Configs.kD = 0.1; // volt/rps //0.1
 
@@ -84,31 +92,55 @@ public class TalonElevator extends SubsystemBase{ // EXTENDS SUBSYSTEMBASE!!!!!!
 
         myTalon.getConfigurator().apply(talonFXConfigs);
 
-        supplyVoltageSignal.setUpdateFrequency(50); // 50Hz frequency
+        supplyVoltageSignal.setUpdateFrequency(50); // 50Hz frequency 
         myTalon.setPosition(0);  
     }
 
     // Setting elevator talon to spin to a certain height
     // a, b, x, and right bumper control different set heights
-    public Command talonSet(double setpoint) {
+    public Command setElevator(Heights setpoint) {
         return runOnce(() -> 
         {
-            myTalon.setControl(m_request.withPosition(setpoint));
+            myTalon.setControl(m_request.withPosition(setpoint.height));
         });
     }
 
+    // Enum of certain heights
+    public enum Heights { // An enum is a class of defined objects
+        L0 ("L0", 0),
+        L1 ("L1", 10),
+        L2 ("L2", 20),
+        L3 ("L3", 30),
+        L4 ("L4", 40);
+
+        String level;
+        double height;
+
+        // Constructor
+        Heights(String level, double height) {
+            this.level = level;
+            this.height = height;
+        }
+    }
+    
+
     @Override
     public void periodic() {
-        SmartDashboard.putNumber("Motor Rotations", myTalon.getPosition().getValueAsDouble());
-        SmartDashboard.putNumber("Closed Loop Output", myTalon.getClosedLoopOutput().getValueAsDouble());
-        SmartDashboard.putNumber("FF Output", myTalon.getClosedLoopFeedForward().getValueAsDouble());
-        SmartDashboard.putNumber("Velocity", myTalon.getVelocity().getValueAsDouble());
-        
+        // Field variable outputs
+        // Position
         motorRotPub.set(myTalon.getPosition(true).getValueAsDouble());
-        closedLoopPub.set(myTalon.getClosedLoopProportionalOutput(true).getValueAsDouble());
-        FFPub.set(myTalon.getClosedLoopFeedForward(true).getValueAsDouble());
+        rotationsTargetPub.set(myTalon.getClosedLoopReference(true).getValueAsDouble());
+        // Velocity
         velocityPub.set(myTalon.getVelocity(true).getValueAsDouble());
         velocityTargetPub.set(myTalon.getClosedLoopReferenceSlope(true).getValueAsDouble());
-        rotationsTargetPub.set(myTalon.getClosedLoopReference(true).getValueAsDouble());
+        // kS & kG (Feed forward)
+        closedLoopPub.set(myTalon.getClosedLoopProportionalOutput(true).getValueAsDouble());
+        FFPub.set(myTalon.getClosedLoopFeedForward(true).getValueAsDouble());
     }
 }
+
+// SmartDashboard output values (noob method)
+/*SmartDashboard.putNumber("Motor Rotations", myTalon.getPosition().getValueAsDouble());
+SmartDashboard.putNumber("Closed Loop Output", myTalon.getClosedLoopOutput().getValueAsDouble());
+SmartDashboard.putNumber("FF Output", myTalon.getClosedLoopFeedForward().getValueAsDouble());
+SmartDashboard.putNumber("Velocity", myTalon.getVelocity().getValueAsDouble());*/
