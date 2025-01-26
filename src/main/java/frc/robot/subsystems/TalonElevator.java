@@ -33,6 +33,7 @@ public class TalonElevator extends SubsystemBase{ // EXTENDS SUBSYSTEMBASE!!!!!!
     private TalonFX myTalon;
     private MotionMagicVoltage m_request;
     private VoltageOut m_voltReq;
+    static final double INCHTOROT = 1/1.35833; // 1.35833 inch/rot
 
     // 50Hz NetworkTable variables
     // Creates a new field that contains all output variables
@@ -86,9 +87,9 @@ public class TalonElevator extends SubsystemBase{ // EXTENDS SUBSYSTEMBASE!!!!!!
 
         // Motion Magic (Trapezoid speed control)
         var motionMagicConfigs = talonFXConfigs.MotionMagic;
-        motionMagicConfigs.MotionMagicCruiseVelocity = 100; 
-        motionMagicConfigs.MotionMagicAcceleration = 150; 
-        motionMagicConfigs.MotionMagicJerk = 2000;
+        motionMagicConfigs.MotionMagicCruiseVelocity = 100; //rot/sec
+        motionMagicConfigs.MotionMagicAcceleration = 150; //rot/sec^2
+        motionMagicConfigs.MotionMagicJerk = 2000; //rot/sec^3
 
         myTalon.getConfigurator().apply(talonFXConfigs);
 
@@ -108,10 +109,10 @@ public class TalonElevator extends SubsystemBase{ // EXTENDS SUBSYSTEMBASE!!!!!!
     // Enum of certain heights
     public enum Heights { // An enum is a class of defined objects
         L0 ("L0", 0),
-        L1 ("L1", 10),
-        L2 ("L2", 20),
-        L3 ("L3", 30),
-        L4 ("L4", 40);
+        L1 ("L1", 13.5833*INCHTOROT),
+        L2 ("L2", 27.1666*INCHTOROT),
+        L3 ("L3", 40.75*INCHTOROT),
+        L4 ("L4", 54.3333*INCHTOROT);
 
         String level;
         double height;

@@ -86,7 +86,7 @@ public class RobotContainer {
     m_driverController.rightBumper().onTrue(elevator.setElevator(TalonElevator.Heights.L0));
     // Must reference the actual class name when enum (a class) is made within a class
   }
-} // 40.75 inches
+} // 40.75 inches = 30 rotations
 
 // Terminal
 // git add .
