@@ -19,6 +19,8 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 
 import static edu.wpi.first.wpilibj2.command.Commands.*;
 
+import java.util.function.DoubleSupplier;
+
 import com.ctre.phoenix6.SignalLogger;
 
 import edu.wpi.first.wpilibj.motorcontrol.Spark;
@@ -78,17 +80,22 @@ public class RobotContainer {
    * joysticks}.
    */
   private void configureBindings() {
-    m_driverController.a().onTrue(elevator.setElevator(TalonElevator.Heights.L1));
-    m_driverController.b().onTrue(elevator.setElevator(TalonElevator.Heights.L2));
-    m_driverController.x().onTrue(elevator.setElevator(TalonElevator.Heights.L3));
-    m_driverController.y().onTrue(elevator.setElevator(TalonElevator.Heights.L4));
+    m_driverController.a().onTrue(elevator.setHeightLevel(TalonElevator.Heights.L1));
+    m_driverController.b().onTrue(elevator.setHeightLevel(TalonElevator.Heights.L2));
+    m_driverController.x().onTrue(elevator.setHeightLevel(TalonElevator.Heights.L3));
+    m_driverController.y().onTrue(elevator.setHeightLevel(TalonElevator.Heights.L4));
     //m_driverController.y().onTrue(elevator.talonSet(34));
-    m_driverController.rightBumper().onTrue(elevator.setElevator(TalonElevator.Heights.L0));
+    m_driverController.rightBumper().onTrue(elevator.setHeightLevel(TalonElevator.Heights.L0));
     // Must reference the actual class name when enum (a class) is made within a class
+
+    DoubleSupplier rightY = ()-> m_driverController.getRightY()*-1; //fwd = +
+    //m_driverController.leftBumper().whileTrue(elevator.setHeightJoystick(rightY));
+    m_driverController.leftBumper().whileTrue(elevator.setHeightJoystickOpen(rightY));
+
   }
 } // 40.75 inches = 30 rotations
 
 // Terminal
 // git add .
 // git commit -m 'message'
-// git push origin HEAD:main2
+// git push origin (HEAD:main2)

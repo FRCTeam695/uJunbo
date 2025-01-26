@@ -5,6 +5,7 @@ import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.configs.VoltageConfigs;
+import com.ctre.phoenix6.controls.DutyCycleOut;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
@@ -30,10 +31,10 @@ import static edu.wpi.first.units.Units.Volts; // Static so that everything is t
 import java.util.function.DoubleSupplier;
 
 public class TalonElevator extends SubsystemBase{ // EXTENDS SUBSYSTEMBASE!!!!!!!!!
-    private TalonFX myTalon;
+    private TalonFX m_talon;
     private MotionMagicVoltage m_request;
     private VoltageOut m_voltReq;
-    static final double INCHTOROT = 1/1.35833; // 1.35833 inch/rot
+    static final double rotationsPerInch = 1/1.35833; // 1.35833 inch/rot
 
     // 50Hz NetworkTable variables
     // Creates a new field that contains all output variables
@@ -52,12 +53,13 @@ public class TalonElevator extends SubsystemBase{ // EXTENDS SUBSYSTEMBASE!!!!!!
 
     // Constructor
     public TalonElevator() {
-        myTalon = new TalonFX(50); // Falcon 500
-
+        // Declarations
+        m_talon = new TalonFX(50); // Falcon 500
         var talonFXConfigs = new TalonFXConfiguration(); // All paramater configs
         m_request = new MotionMagicVoltage(0); // Trapezoid config
-        
-        var supplyVoltageSignal = myTalon.getSupplyVoltage(); // Motor signaling rate
+
+        m_talon.setControl(m_request.withUpdateFreqHz(50));
+
         m_voltReq = new VoltageOut(0);
 
         // Limits and modes
@@ -67,23 +69,23 @@ public class TalonElevator extends SubsystemBase{ // EXTENDS SUBSYSTEMBASE!!!!!!
 
         talonFXConfigs.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
         talonFXConfigs.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
-        talonFXConfigs.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 35; // Rotations
+        talonFXConfigs.SoftwareLimitSwitch.ForwardSoftLimitThreshold = 40; // Rotations
         talonFXConfigs.SoftwareLimitSwitch.ReverseSoftLimitThreshold = 0;
         
         // Tuning
         var slot0Configs = talonFXConfigs.Slot0;
         // kG and kS is mainly for overshoot + undershoot tuning
         // 0.5V is needed for gravity/friction
-        slot0Configs.kG = 0.37; // Gravity 0.37 volt
+        slot0Configs.kG = 0.312; // Gravity 0.312 volt
         slot0Configs.GravityType = GravityTypeValue.Elevator_Static;
-        slot0Configs.kS = 0.07; // Friction 0.07 volt
+        slot0Configs.kS = 0.10; // Friction 0.07 volt
         slot0Configs.StaticFeedforwardSign = StaticFeedforwardSignValue.UseClosedLoopSign;
         // kV and kA pairs with MM
-        slot0Configs.kV = 0.13; // volt/rps
-        slot0Configs.kA = 0.008; // volt/rps/s //0.008
+        slot0Configs.kV = 0.12; // 0.12 volt/rps 
+        slot0Configs.kA = 0.006; // 0.006 volt/rps/s 
         // kP and kD accounts for errors created by in-match hits
-        slot0Configs.kP = 3.5; // volt/(r*s) //3.5
-        slot0Configs.kD = 0.1; // volt/rps //0.1
+        slot0Configs.kP = 3.7; // 3.7 volt/(r*s) 
+        slot0Configs.kD = 0.1; // 0.1 volt/rps 
 
         // Motion Magic (Trapezoid speed control)
         var motionMagicConfigs = talonFXConfigs.MotionMagic;
@@ -91,52 +93,59 @@ public class TalonElevator extends SubsystemBase{ // EXTENDS SUBSYSTEMBASE!!!!!!
         motionMagicConfigs.MotionMagicAcceleration = 150; //rot/sec^2
         motionMagicConfigs.MotionMagicJerk = 2000; //rot/sec^3
 
-        myTalon.getConfigurator().apply(talonFXConfigs);
-
-        supplyVoltageSignal.setUpdateFrequency(50); // 50Hz frequency 
-        myTalon.setPosition(0);  
+        m_talon.getConfigurator().apply(talonFXConfigs);
+        m_talon.setPosition(0);  
     }
 
     // Setting elevator talon to spin to a certain height
     // a, b, x, and right bumper control different set heights
-    public Command setElevator(Heights setpoint) {
+    public Command setHeightLevel(Heights setpoint) {
         return runOnce(() -> 
         {
-            myTalon.setControl(m_request.withPosition(setpoint.height));
+            m_talon.setControl(m_request.withPosition(setpoint.heightInches*rotationsPerInch));
+        });
+    }
+
+    // Joystick commanded open-loop
+    public Command setHeightJoystickOpen(DoubleSupplier setpoint) {
+        DutyCycleOut req = new DutyCycleOut(0);
+        return run(() ->
+        {
+            m_talon.setControl(req.withOutput(setpoint.getAsDouble()));
         });
     }
 
     // Enum of certain heights
     public enum Heights { // An enum is a class of defined objects
         L0 ("L0", 0),
-        L1 ("L1", 13.5833*INCHTOROT),
-        L2 ("L2", 27.1666*INCHTOROT),
-        L3 ("L3", 40.75*INCHTOROT),
-        L4 ("L4", 54.3333*INCHTOROT);
+        L1 ("L1", 13.5833),
+        L2 ("L2", 27.1666),
+        L3 ("L3", 40.75),
+        L4 ("L4", 54.3333);
 
         String level;
-        double height;
+        double heightInches;
 
         // Constructor
-        Heights(String level, double height) {
+        Heights(String level, double heightInches) {
             this.level = level;
-            this.height = height;
+            this.heightInches = heightInches;
         }
     }
     
-
     @Override
     public void periodic() {
+        //SmartDashboard.putNumber("Voltage Output", m_talon.getOutput().getValueAsDouble());
         // Field variable outputs
         // Position
-        motorRotPub.set(myTalon.getPosition(true).getValueAsDouble());
-        rotationsTargetPub.set(myTalon.getClosedLoopReference(true).getValueAsDouble());
+        motorRotPub.set(m_talon.getPosition(true).getValueAsDouble());
+        rotationsTargetPub.set(m_talon.getClosedLoopReference(true).getValueAsDouble());
         // Velocity
-        velocityPub.set(myTalon.getVelocity(true).getValueAsDouble());
-        velocityTargetPub.set(myTalon.getClosedLoopReferenceSlope(true).getValueAsDouble());
+        velocityPub.set(m_talon.getVelocity(true).getValueAsDouble());
+        velocityTargetPub.set(m_talon.getClosedLoopReferenceSlope(true).getValueAsDouble());
         // kS & kG (Feed forward)
-        closedLoopPub.set(myTalon.getClosedLoopProportionalOutput(true).getValueAsDouble());
-        FFPub.set(myTalon.getClosedLoopFeedForward(true).getValueAsDouble());
+        closedLoopPub.set(m_talon.getClosedLoopProportionalOutput(true).getValueAsDouble());
+        FFPub.set(m_talon.getClosedLoopFeedForward(true).getValueAsDouble());
     }
 }
 
@@ -145,3 +154,11 @@ public class TalonElevator extends SubsystemBase{ // EXTENDS SUBSYSTEMBASE!!!!!!
 SmartDashboard.putNumber("Closed Loop Output", myTalon.getClosedLoopOutput().getValueAsDouble());
 SmartDashboard.putNumber("FF Output", myTalon.getClosedLoopFeedForward().getValueAsDouble());
 SmartDashboard.putNumber("Velocity", myTalon.getVelocity().getValueAsDouble());*/
+
+
+/*public Command setHeightJoystick(DoubleSupplier setpoint) {
+    return run(() ->
+    {
+        m_talon.setControl(m_request.withPosition(setpoint.getAsDouble()*40));
+    });
+}*/
