@@ -55,6 +55,11 @@ public class TalonElevator extends SubsystemBase{ // EXTENDS SUBSYSTEMBASE!!!!!!
     public TalonElevator() {
         // Declarations
         m_talon = new TalonFX(50); // Falcon 500
+        /* 
+         * 2025 elevator: Two side motors
+         * L_followerTalon.follow(R_leaderTalon);
+         * L_followerTalon.setInverted(TalonFXInvertType.FollowMaster);
+         */
         var talonFXConfigs = new TalonFXConfiguration(); // All paramater configs
         m_request = new MotionMagicVoltage(0); // Trapezoid config
 
@@ -111,7 +116,8 @@ public class TalonElevator extends SubsystemBase{ // EXTENDS SUBSYSTEMBASE!!!!!!
         DutyCycleOut req = new DutyCycleOut(0);
         return run(() ->
         {
-            m_talon.setControl(req.withOutput(setpoint.getAsDouble()));
+            m_talon.setControl(req.withOutput(setpoint.getAsDouble())); 
+            // Setting position is closed-loop; voltage is open-loop
         });
     }
 
@@ -135,7 +141,6 @@ public class TalonElevator extends SubsystemBase{ // EXTENDS SUBSYSTEMBASE!!!!!!
     
     @Override
     public void periodic() {
-        //SmartDashboard.putNumber("Voltage Output", m_talon.getOutput().getValueAsDouble());
         // Field variable outputs
         // Position
         motorRotPub.set(m_talon.getPosition(true).getValueAsDouble());
@@ -146,19 +151,11 @@ public class TalonElevator extends SubsystemBase{ // EXTENDS SUBSYSTEMBASE!!!!!!
         // kS & kG (Feed forward)
         closedLoopPub.set(m_talon.getClosedLoopProportionalOutput(true).getValueAsDouble());
         FFPub.set(m_talon.getClosedLoopFeedForward(true).getValueAsDouble());
+
+        // SmartDashboard output values
+        SmartDashboard.putNumber("Motor Rotations", m_talon.getPosition().getValueAsDouble());
+        SmartDashboard.putNumber("Closed Loop Output", m_talon.getClosedLoopOutput().getValueAsDouble());
+        SmartDashboard.putNumber("FF Output", m_talon.getClosedLoopFeedForward().getValueAsDouble());
+        SmartDashboard.putNumber("Velocity", m_talon.getVelocity().getValueAsDouble());
     }
 }
-
-// SmartDashboard output values (noob method)
-/*SmartDashboard.putNumber("Motor Rotations", myTalon.getPosition().getValueAsDouble());
-SmartDashboard.putNumber("Closed Loop Output", myTalon.getClosedLoopOutput().getValueAsDouble());
-SmartDashboard.putNumber("FF Output", myTalon.getClosedLoopFeedForward().getValueAsDouble());
-SmartDashboard.putNumber("Velocity", myTalon.getVelocity().getValueAsDouble());*/
-
-
-/*public Command setHeightJoystick(DoubleSupplier setpoint) {
-    return run(() ->
-    {
-        m_talon.setControl(m_request.withPosition(setpoint.getAsDouble()*40));
-    });
-}*/
