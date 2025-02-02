@@ -30,7 +30,7 @@ import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.CounterBase.EncodingType;
 import edu.wpi.first.wpilibj.motorcontrol.Spark;
-
+import frc.robot.subsystems.AlgaeArm;
 import frc.robot.subsystems.TalonElevator;
 //import edu.wpi.first.wpilibj.PWM;
 //import edu.wpi.first.wpilibj.Servo;
@@ -46,7 +46,8 @@ public class RobotContainer {
   //private final ExampleSubsystem m_exampleSubsystem = new ExampleSubsystem();
   //private final PreSeasonSubsystem mySubsystem = new PreSeasonSubsystem();
   //private final MotorSubsystem driveTrain = new MotorSubsystem(mySubsystem, 56); // mySubsystem = PreSeasonSubsystem
-  private final TalonElevator elevator = new TalonElevator();
+  //private final TalonElevator elevator = new TalonElevator();
+  private final AlgaeArm arm = new AlgaeArm();
 
   // Joysticks (Not controller) - Deprecated
   //public static CommandJoystick myLeftJoystick;
@@ -80,7 +81,7 @@ public class RobotContainer {
    * joysticks}.
    */
   private void configureBindings() {
-    m_driverController.a().onTrue(elevator.setHeightLevel(TalonElevator.Heights.L1));
+    /*m_driverController.a().onTrue(elevator.setHeightLevel(TalonElevator.Heights.L1));
     m_driverController.b().onTrue(elevator.setHeightLevel(TalonElevator.Heights.L2));
     m_driverController.x().onTrue(elevator.setHeightLevel(TalonElevator.Heights.L3));
     m_driverController.y().onTrue(elevator.setHeightLevel(TalonElevator.Heights.L4));
@@ -90,8 +91,17 @@ public class RobotContainer {
 
     DoubleSupplier rightY = ()-> m_driverController.getRightY()*-1; //fwd = +
     //m_driverController.leftBumper().whileTrue(elevator.setHeightJoystick(rightY));
-    m_driverController.leftBumper().whileTrue(elevator.setHeightJoystickOpen(rightY));
+    m_driverController.leftBumper().whileTrue(elevator.setHeightJoystickOpen(rightY));*/
 
+
+    // Arm pitch
+    m_driverController.a().whileTrue(arm.runPitch(() -> 20));
+    m_driverController.b().whileTrue(arm.runPitch(() -> 30));
+
+    m_driverController.rightBumper().whileTrue(arm.runIntakeIn(() -> -0.5));
+    m_driverController.leftBumper().whileTrue(arm.runIntakeOut());
+
+    arm.setDefaultCommand(arm.stop());
   }
 } // 40.75 inches = 30 rotations
 
