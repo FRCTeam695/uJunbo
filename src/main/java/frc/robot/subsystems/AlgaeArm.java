@@ -1,37 +1,35 @@
 package frc.robot.subsystems;
 
-import frc.robot.RobotContainer;
-import edu.wpi.first.wpilibj.CounterBase.EncodingType;
-
-import static edu.wpi.first.wpilibj2.command.Commands.parallel;
-import static edu.wpi.first.wpilibj2.command.Commands.runOnce;
-
-import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
 import com.revrobotics.RelativeEncoder;
-import com.revrobotics.spark.SparkClosedLoopController;
-import com.revrobotics.spark.SparkLowLevel;
-import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
+import com.revrobotics.spark.SparkClosedLoopController;
+import com.revrobotics.spark.SparkLowLevel;
+import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.WaitCommand;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 
 public class AlgaeArm extends SubsystemBase{
-    public SparkMax intakeMotor;
-    public SparkMax pitchMotor;
-    public RelativeEncoder m_pitchEncoder;
-    public RelativeEncoder m_intakeEncoder;
+    private SparkMax intakeMotor;
+    private SparkMax pitchMotor;
+    private RelativeEncoder m_pitchEncoder;
+    private RelativeEncoder m_intakeEncoder;
 
-    public SparkClosedLoopController m_pidControl;
-    public SparkMaxConfig configPitch;
-    public SparkMaxConfig configIntake;
+    private SparkClosedLoopController m_pidControl;
+    private SparkMaxConfig configPitch;
+    private SparkMaxConfig configIntake;
+
+    public Trigger hasAlgae;
+    private boolean algaeContained;
 
     public AlgaeArm () {
         intakeMotor = new SparkMax(54, SparkLowLevel.MotorType.kBrushless);
@@ -42,10 +40,10 @@ public class AlgaeArm extends SubsystemBase{
         configPitch = new SparkMaxConfig();
         
         configPitch
-            .smartCurrentLimit(10)
+            .smartCurrentLimit(20)
             .idleMode(IdleMode.kBrake);
         configPitch.closedLoop
-            .pid(0.02, 0.0, 0.0);
+            .pid(0.03, 0.0, 0.0);
 
         m_pitchEncoder = pitchMotor.getEncoder();
         m_pitchEncoder.setPosition(0);
@@ -56,47 +54,78 @@ public class AlgaeArm extends SubsystemBase{
         configIntake = new SparkMaxConfig();
 
         configIntake
-            .smartCurrentLimit(20)
+            .smartCurrentLimit(10)
             .idleMode(IdleMode.kBrake);
 
         m_intakeEncoder = intakeMotor.getEncoder();
         m_intakeEncoder.setPosition(0);
         
         intakeMotor.configure(configIntake, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+
+        algaeContained = false;
+        // Trigger
+        hasAlgae = new Trigger(()-> algaeContained);
     }
 
-    public Command runPitch(DoubleSupplier rot) {
+    public Command requireSubsystem(){
+        return new WaitCommand(0);
+    }
+
+    public Command runAlgalizer(DoubleSupplier targetRot, DoubleSupplier setSpeed) {
+        return run(() -> {
+            m_pidControl.setReference(targetRot.getAsDouble(), ControlType.kPosition);
+
+            configIntake.smartCurrentLimit(3);
+            intakeMotor.set(setSpeed.getAsDouble());
+
+            algaeContained = Math.abs(intakeMotor.getEncoder().getVelocity()) < 0.1;   
+        });
+    }
+
+    public Command holdPitch() {
+        return run(() -> {
+            intakeMotor.set(0);
+        });
+    }
+
+    /*public Command runPitch(DoubleSupplier targetRot) {
         return run(() -> 
         m_pidControl.setReference(
-            rot.getAsDouble(), 
-            ControlType.kPosition))
-        .until(() -> Math.abs(intakeMotor.getEncoder().getPosition() - rot.getAsDouble()) < 0.1);
-    }
+            targetRot.getAsDouble(), 
+            ControlType.kPosition));
+        //.until(() -> Math.abs(pitchMotor.getEncoder().getPosition() - targetRot.getAsDouble()) < 0.1);
+        // Stops moving arm when position reaches within 0.1 rotations of target rotation
+    }*/
 
-    public Command runIntakeIn(DoubleSupplier speed) {
+    /*public Command runIntakeIn(DoubleSupplier setSpeed) {
         return runOnce(() ->
-        configIntake.smartCurrentLimit(5))
-        .andThen(run(() -> intakeMotor.set(speed.getAsDouble())));
-    }
+        configIntake.smartCurrentLimit(1))
+        .andThen(run(() -> intakeMotor.set(setSpeed.getAsDouble())));
+    }*/
 
     public Command runIntakeOut() {
-        return runOnce(() ->
-        configIntake.smartCurrentLimit(40))
-        .andThen(run(() -> intakeMotor.set(-1)));
+        return run(() -> {
+            configIntake.smartCurrentLimit(40);
+            intakeMotor.set(-1);
+            algaeContained = false;
+        });
     }
 
     public Command stop() {
         return run(()->{
             intakeMotor.set(0);
             m_pidControl.setReference(0, ControlType.kPosition);
-        })
-        .until(() -> Math.abs(intakeMotor.getEncoder().getPosition() - 0) < 0.1)
-        .andThen(()->pitchMotor.getEncoder().setPosition(0));
+        });
+        //.until(() -> Math.abs(pitchMotor.getEncoder().getPosition() - 0) < 0.1);
+        //.andThen(()->pitchMotor.getEncoder().setPosition(0));
     }
+
+
 
     @Override
     public void periodic() {
         SmartDashboard.putNumber("Motor Rotations", pitchMotor.getEncoder().getPosition());
+        SmartDashboard.putBoolean("Has Algae", hasAlgae.getAsBoolean());
     }
     
 }

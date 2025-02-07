@@ -11,6 +11,7 @@ package frc.robot;
 //import frc.robot.subsystems.PreSeasonSubsystem;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.ConditionalCommand;
 import edu.wpi.first.wpilibj2.command.PrintCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -47,7 +48,7 @@ public class RobotContainer {
   //private final PreSeasonSubsystem mySubsystem = new PreSeasonSubsystem();
   //private final MotorSubsystem driveTrain = new MotorSubsystem(mySubsystem, 56); // mySubsystem = PreSeasonSubsystem
   //private final TalonElevator elevator = new TalonElevator();
-  private final AlgaeArm arm = new AlgaeArm();
+  private final AlgaeArm algalizer = new AlgaeArm();
 
   // Joysticks (Not controller) - Deprecated
   //public static CommandJoystick myLeftJoystick;
@@ -95,13 +96,20 @@ public class RobotContainer {
 
 
     // Arm pitch
-    m_driverController.a().whileTrue(arm.runPitch(() -> 20));
-    m_driverController.b().whileTrue(arm.runPitch(() -> 30));
+    /*m_driverController.rightBumper().whileTrue(algalizer.runIntakeIn(() -> -1));
+    m_driverController.x().whileTrue(algalizer.runIntakeIn(() -> 1));
+    m_driverController.leftBumper().whileTrue(algalizer.runIntakeOut());*/
+    m_driverController.leftBumper().whileTrue(algalizer.runAlgalizer(() -> 17, () -> -1));
+    m_driverController.leftBumper().onFalse(
+      new ConditionalCommand(
+        algalizer.holdPitch(),
+        algalizer.requireSubsystem(),
+        algalizer.hasAlgae));
 
-    m_driverController.rightBumper().whileTrue(arm.runIntakeIn(() -> -0.5));
-    m_driverController.leftBumper().whileTrue(arm.runIntakeOut());
+    //m_driverController.rightBumper().whileTrue(algalizer.runAlgalizer(() -> 45, () -> 1));
+    m_driverController.x().whileTrue(algalizer.runIntakeOut());
 
-    arm.setDefaultCommand(arm.stop());
+    algalizer.setDefaultCommand(algalizer.stop());
   }
 } // 40.75 inches = 30 rotations
 
