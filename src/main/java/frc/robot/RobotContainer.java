@@ -99,7 +99,7 @@ public class RobotContainer {
     /*m_driverController.rightBumper().whileTrue(algalizer.runIntakeIn(() -> -1));
     m_driverController.x().whileTrue(algalizer.runIntakeIn(() -> 1));
     m_driverController.leftBumper().whileTrue(algalizer.runIntakeOut());*/
-    m_driverController.leftBumper().whileTrue(algalizer.runAlgalizer(() -> 17, () -> -1));
+    m_driverController.leftBumper().whileTrue(algalizer.runAlgalizer(() -> 12, () -> -1));
     m_driverController.leftBumper().onFalse(
       new ConditionalCommand(
         algalizer.holdPitch(),

@@ -12,6 +12,7 @@ import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -30,6 +31,7 @@ public class AlgaeArm extends SubsystemBase{
 
     public Trigger hasAlgae;
     private boolean algaeContained;
+    private boolean armHasHitApex = false;
 
     public AlgaeArm () {
         intakeMotor = new SparkMax(54, SparkLowLevel.MotorType.kBrushless);
@@ -72,14 +74,26 @@ public class AlgaeArm extends SubsystemBase{
     }
 
     public Command runAlgalizer(DoubleSupplier targetRot, DoubleSupplier setSpeed) {
-        return run(() -> {
-            m_pidControl.setReference(targetRot.getAsDouble(), ControlType.kPosition);
+        return 
+            runOnce(()->{armHasHitApex = false;}).andThen(run(() -> {
+            double targetPitch = targetRot.getAsDouble();
+            m_pidControl.setReference(targetPitch, ControlType.kPosition);
 
             configIntake.smartCurrentLimit(3);
             intakeMotor.set(setSpeed.getAsDouble());
-
-            algaeContained = Math.abs(intakeMotor.getEncoder().getVelocity()) < 0.1;   
-        });
+            SmartDashboard.putNumber("roller current", intakeMotor.getOutputCurrent());
+            double armPosition = pitchMotor.getEncoder().getPosition();
+            if(!armHasHitApex){
+                armHasHitApex = armPosition > 17;
+            }
+            if(algaeContained){
+                intakeMotor.set(0);
+            }
+            else{
+                algaeContained = Math.abs(targetPitch - armPosition) < 2 && armHasHitApex;  
+                intakeMotor.set(setSpeed.getAsDouble());
+            }
+        }));
     }
 
     public Command holdPitch() {
